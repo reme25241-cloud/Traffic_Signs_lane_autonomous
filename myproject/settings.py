@@ -125,8 +125,17 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 # Application definition
 
-STATICFILES_DIRS = [BASE_DIR / 'static'] 
-STATIC_ROOT = BASE_DIR / 'staticfiles' 
+
+STATIC_URL = '/static/'
+
+# Where collectstatic will put files
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Optional: if you have app-level static folders
+STATICFILES_DIRS = [
+    BASE_DIR / 'static'
+]
+
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -150,4 +159,5 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 
