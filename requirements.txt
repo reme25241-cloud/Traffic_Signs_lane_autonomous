@@ -5,4 +5,5 @@ django-widget-tweaks
 opencv-python
 scikit-learn
 pandas
+whitenoise
 gunicorn
