@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="text-primary mb-0">📊 Traffic Sign Analytics</h3>
+
+    <form method="get" class="d-flex gap-2">
+      <select name="days" class="form-select" style="width: 160px;">
+        <option value="7"  {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+        <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+        <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 days</option>
+      </select>
+      <button class="btn btn-outline-primary">Apply</button>
+    </form>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="card shadow-sm p-3">
+        <div class="text-muted">Total Uploads</div>
+        <div class="fs-3 fw-bold">{{ total_uploads }}</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm p-3">
+        <div class="text-muted">Total Predictions</div>
+        <div class="fs-3 fw-bold">{{ total_predictions }}</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm p-3">
+        <div class="text-muted">Average Confidence</div>
+        <div class="fs-3 fw-bold">{{ avg_conf }}%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="row g-3 mt-1">
+    <div class="col-md-6">
+      <div class="card shadow-sm p-3">
+        <h6 class="mb-3">Predictions per Day</h6>
+        <canvas id="dailyChart"></canvas>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card shadow-sm p-3">
+        <h6 class="mb-3">Top Predicted Signs (Top 10)</h6>
+        <canvas id="topSignsChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confidence Breakdown -->
+  <div class="row g-3 mt-1">
+    <div class="col-md-6">
+      <div class="card shadow-sm p-3">
+        <h6 class="mb-3">Confidence Breakdown</h6>
+        <canvas id="confidenceChart"></canvas>
+        <div class="small text-muted mt-2">
+          High (≥ 90%): {{ high_conf }} |
+          Medium (70–89%): {{ mid_conf }} |
+          Low (&lt; 70%): {{ low_conf }}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card shadow-sm p-3">
+        <h6 class="mb-3">Top Signs Table</h6>
+        <div class="table-responsive">
+          <table class="table table-sm table-striped align-middle">
+            <thead>
+              <tr>
+                <th>Sign</th>
+                <th class="text-end">Count</th>
+                <th class="text-end">Avg Conf</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in top_signs %}
+                <tr>
+                  <td>{{ s.predicted_sign }}</td>
+                  <td class="text-end">{{ s.count }}</td>
+                  <td class="text-end">{{ s.avg_conf|floatformat:2 }}%</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="text-center text-muted">No data yet</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Predictions -->
+  <div class="card shadow-sm p-3 mt-3">
+    <h6 class="mb-3">Recent Predictions</h6>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Predicted Sign</th>
+            <th class="text-end">Confidence</th>
+            <th>Notes</th>
+            <!-- <th>Original</th>
+            <th>ROI</th> -->
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in recent %}
+          <tr>
+            <td>{{ p.created_at|date:"Y-m-d H:i" }}</td>
+            <td class="fw-semibold">{{ p.predicted_sign }}</td>
+            <td class="text-end">{{ p.confidence|floatformat:2 }}%</td>
+            <td class="text-truncate" style="max-width: 220px;">{{ p.notes|default:"—" }}</td>
+
+            <!-- <td>
+              {% if p.upload.original_image %}
+                <a href="{{ p.upload.original_image.url }}" target="_blank">View</a>
+              {% else %} — {% endif %}
+            </td>
+            <td>
+              {% if p.roi_image %}
+                <a href="{{ p.roi_image.url }}" target="_blank">View</a>
+              {% else %} — {% endif %}
+            </td> -->
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted">No predictions yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+  // Daily data from Django
+  const dailyLabels = [{% for d in daily %}"{{ d.day }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+  const dailyCounts = [{% for d in daily %}{{ d.count }}{% if not forloop.last %},{% endif %}{% endfor %}];
+
+  // Top signs
+  const topLabels = [{% for s in top_signs %}"{{ s.predicted_sign|escapejs }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+  const topCounts = [{% for s in top_signs %}{{ s.count }}{% if not forloop.last %},{% endif %}{% endfor %}];
+
+  // Confidence
+  const confData = [{{ high_conf }}, {{ mid_conf }}, {{ low_conf }}];
+
+  new Chart(document.getElementById("dailyChart"), {
+    type: "line",
+    data: {
+      labels: dailyLabels,
+      datasets: [{ label: "Predictions", data: dailyCounts, tension: 0.3 }]
+    },
+    options: { responsive: true }
+  });
+
+  new Chart(document.getElementById("topSignsChart"), {
+    type: "bar",
+    data: {
+      labels: topLabels,
+      datasets: [{ label: "Count", data: topCounts }]
+    },
+    options: { responsive: true, indexAxis: "y" }
+  });
+
+  new Chart(document.getElementById("confidenceChart"), {
+    type: "doughnut",
+    data: {
+      labels: ["High (≥90%)", "Medium (70–89%)", "Low (<70%)"],
+      datasets: [{ data: confData }]
+    },
+    options: { responsive: true }
+  });
+</script>
+{% endblock %}

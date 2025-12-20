@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+
+      <div class="card shadow p-4 border-primary border-2">
+        <h4 class="text-center text-primary mb-3">📤 Upload Traffic Sign Image</h4>
+
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <input type="file"
+                   name="image"
+                   accept="image/*"
+                   class="form-control"
+                   required>
+          </div>
+
+          <div class="d-grid">
+            <button class="btn btn-primary">
+              Upload & Classify
+            </button>
+          </div>
+        </form>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
