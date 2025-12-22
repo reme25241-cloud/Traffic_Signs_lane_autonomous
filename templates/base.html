@@ -66,27 +66,60 @@
 <!-- ======= Header ======= -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
   <div class="container-fluid container-xl">
-    <a class="navbar-brand fw-bold" href="#">Traffic Sign AI System</a>
 
+    <!-- Brand -->
+    <a class="navbar-brand fw-bold" href="/">Traffic Sign AI System</a>
+
+    <!-- Mobile Toggle -->
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navmenu">
       <span class="navbar-toggler-icon"></span>
     </button>
 
+    <!-- Menu -->
     <div class="collapse navbar-collapse" id="navmenu">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item"><a class="nav-link active" href="#">Home</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">About</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Predict</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Profile</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Lane</a></li>
+
+        <li class="nav-item">
+          <a class="nav-link active" href="/">Home</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'about' %}">About</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'upload_sign_image' %}">Predict</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'profile' %}">Profile</a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'lane' %}">Lane</a>
+        </li>
+
       </ul>
 
-      <a class="btn-getstarted" href="#">Login</a>
-      <a class="btn-getstarted" href="#">Signup</a>
+      <!-- Auth Buttons -->
+      {% if user.is_authenticated %}
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button class="btn btn-outline-light btn-sm">Logout</button>
+        </form>
+      {% else %}
+        <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm me-2">Login</a>
+        <a href="{% url 'signup' %}" class="btn btn-primary btn-sm">Signup</a>
+      {% endif %}
     </div>
+
   </div>
 </nav>
+
 
 <!-- ======= Hero Section ======= -->
 <section class="hero d-flex align-items-center"
@@ -137,4 +170,5 @@
 
 </body>
 </html>
+
 
