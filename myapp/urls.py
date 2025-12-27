@@ -38,9 +38,10 @@ urlpatterns = [
 
     path("lane/", lane, name="lane"),
 
-    path('predict/', predict, name='predict'),
+    path('predict_live_input/', predict_live_input, name='predict_live_input'),
 
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
 
 
