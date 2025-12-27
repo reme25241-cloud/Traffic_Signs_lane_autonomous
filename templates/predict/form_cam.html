@@ -1,1 +1,281 @@
-!  
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow p-4 bg-light border-primary border-3">
+    <h3 class="text-center mb-4 text-primary">🚦 Traffic Sign Classifier</h3>
+
+    {% if image_url %}
+      <div class="text-center mb-4">
+        <img id="imagePreview"
+             src="{{ image_url }}"
+             class="img-fluid rounded border border-primary"
+             style="max-height: 300px;" />
+      </div>
+      <script>
+        window.onload = function () {
+          init().then(() => predict());
+        };
+      </script>
+    {% else %}
+      <div class="alert alert-info text-center">
+        📷 Upload an image first to classify a traffic sign.
+      </div>
+    {% endif %}
+
+    <div class="row">
+      <div class="col-12">
+        <div id="label-container" class="bg-white p-4 rounded shadow-sm border border-secondary"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+
+<script>
+  // ====== Sign metadata shown after prediction ======
+  const signInfo = {
+    "stop sign": {
+      use: "Come to a complete stop before proceeding.",
+      advantages: ["Prevents collisions at intersections", "Clear instruction for all drivers"],
+      disadvantages: ["Ignoring it increases crash risk", "Stops can cause minor congestion"],
+      notes: "Stop fully, check traffic, then go."
+    },
+    "Bumps": {
+      use: "Warns about road bumps/speed breakers ahead.",
+      advantages: ["Reduces vehicle damage", "Improves safety near bumps"],
+      disadvantages: ["May slow traffic", "If ignored, may cause discomfort/damage"],
+      notes: "Slow down before the bump."
+    },
+    "One Way": {
+      use: "Traffic must move only in the indicated direction.",
+      advantages: ["Improves traffic flow", "Reduces head-on collision risk"],
+      disadvantages: ["Wrong-way entry is dangerous", "Needs clear signage in complex areas"],
+      notes: "Follow arrow direction strictly."
+    },
+    "School Ahead": {
+      use: "School zone ahead; drive carefully and reduce speed.",
+      advantages: ["Protects pedestrians/children", "Encourages cautious driving"],
+      disadvantages: ["Congestion near school hours", "Requires strict enforcement"],
+      notes: "Slow down; watch for children crossing."
+    },
+    "U Turn": {
+      use: "U-turn permitted/indicated (context depends on sign design).",
+      advantages: ["Helps route correction", "Guides legal turning options"],
+      disadvantages: ["Unsafe if visibility is poor", "May block traffic briefly"],
+      notes: "Ensure it is safe and permitted."
+    },
+    "Aid Station": {
+      use: "Indicates first aid/medical help available nearby.",
+      advantages: ["Useful in emergencies", "Improves driver confidence"],
+      disadvantages: ["Not always present in remote areas", "Requires maintenance of facilities"],
+      notes: "Follow directions to reach aid station."
+    },
+    "No Entry": {
+      use: "Entry is prohibited from this direction.",
+      advantages: ["Prevents wrong-way driving", "Improves traffic management"],
+      disadvantages: ["Must be clearly visible", "Confusing in poorly marked roads"],
+      notes: "Do not enter under any condition."
+    },
+    "Maximum Speed": {
+      use: "Indicates maximum legal speed limit.",
+      advantages: ["Improves safety", "Standardizes traffic speed"],
+      disadvantages: ["Drivers may ignore", "Needs enforcement for effectiveness"],
+      notes: "Stay at or below the limit."
+    },
+    "Zebra crossing": {
+      use: "Pedestrian crossing ahead.",
+      advantages: ["Improves pedestrian safety", "Clear crossing point"],
+      disadvantages: ["Requires driver compliance", "Wear/fading markings reduce visibility"],
+      notes: "Slow down and yield to pedestrians."
+    },
+    "Left Turn": {
+      use: "Left turn indicated/permitted (context depends on sign).",
+      advantages: ["Guides lane/turning behavior", "Reduces confusion"],
+      disadvantages: ["Unsafe if ignored rules", "Needs clear road markings"],
+      notes: "Signal and turn safely."
+    },
+    "Right Turn": {
+      use: "Right turn indicated/permitted (context depends on sign).",
+      advantages: ["Guides lane/turning behavior", "Reduces confusion"],
+      disadvantages: ["Unsafe if ignored rules", "Needs clear road markings"],
+      notes: "Signal and turn safely."
+    },
+    "Horn Prohibited": {
+      use: "Honking is prohibited in this area (e.g., hospitals/schools).",
+      advantages: ["Reduces noise pollution", "Improves community comfort"],
+      disadvantages: ["Less warning signal in emergencies", "Depends on compliance"],
+      notes: "Avoid honking unless emergency rules allow."
+    },
+    "Two Way Road": {
+      use: "Two-way traffic ahead.",
+      advantages: ["Warns drivers to stay in lane", "Reduces head-on collision risk"],
+      disadvantages: ["Danger if drivers overtake carelessly", "Needs lane markings"],
+      notes: "Drive carefully; oncoming traffic expected."
+    },
+    "Train Crossing": {
+      use: "Railway crossing ahead.",
+      advantages: ["Prevents severe accidents", "Prompts early braking"],
+      disadvantages: ["Drivers may ignore if rarely used", "Requires clear visibility"],
+      notes: "Slow down, look both ways, obey barriers/lights."
+    },
+    "Restricted Zone": {
+      use: "Entry/activities restricted (varies by region).",
+      advantages: ["Controls traffic/access", "Improves safety/security"],
+      disadvantages: ["Confusing if not explained", "Needs enforcement"],
+      notes: "Follow local restrictions and signage."
+    },
+    "No Overtaking": {
+      use: "Overtaking is prohibited.",
+      advantages: ["Prevents risky passing", "Safer on narrow/curvy roads"],
+      disadvantages: ["May slow traffic", "Requires compliance"],
+      notes: "Stay behind; do not pass."
+    },
+    "Traffic Signal": {
+      use: "Traffic signal ahead.",
+      advantages: ["Reduces sudden stops", "Improves intersection safety"],
+      disadvantages: ["Drivers may still speed", "Needs maintenance"],
+      notes: "Prepare to stop if signal changes."
+    },
+    "Narrow Road": {
+      use: "Road narrows ahead.",
+      advantages: ["Reduces side-swipe accidents", "Prompts caution"],
+      disadvantages: ["Congestion in bottlenecks", "Needs clear markings"],
+      notes: "Slow down; keep safe distance."
+    },
+    "Diesel Fuel": {
+      use: "Diesel fuel station/service available nearby.",
+      advantages: ["Helps drivers locate fuel", "Reduces running-out incidents"],
+      disadvantages: ["Not useful if outdated", "Depends on station availability"],
+      notes: "Confirm station is operational."
+    },
+    "No Parking": {
+      use: "Parking prohibited.",
+      advantages: ["Keeps roads clear", "Improves traffic flow/safety"],
+      disadvantages: ["Limited parking availability", "Needs enforcement"],
+      notes: "Do not park in this zone."
+    }
+  };
+
+  // Normalize class names coming from model (trim extra spaces)
+  function normalizeLabel(label) {
+    return (label || "").trim();
+  }
+
+  const URL = "https://teachablemachine.withgoogle.com/models/oZlftKGPQ/";
+  let model, maxPredictions, labelContainer;
+
+  async function init() {
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
+    model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
+    labelContainer = document.getElementById("label-container");
+    labelContainer.innerHTML = "";
+  }
+
+  async function predict() {
+    const image = document.getElementById("imagePreview");
+    const prediction = await model.predict(image, false);
+
+    let best = prediction[0];
+    for (let i = 1; i < prediction.length; i++) {
+      if (prediction[i].probability > best.probability) best = prediction[i];
+    }
+
+    const label = normalizeLabel(best.className);
+    const confidence = best.probability * 100;
+
+    if (confidence < 90) {
+      labelContainer.innerHTML = `
+        <h5 class="text-danger">Undefined (Confidence: ${confidence.toFixed(2)}%)</h5>
+        <div class="alert alert-warning mt-3 mb-0">Model is unsure. Try another image.</div>
+      `;
+      return;
+    }
+
+    const info = signInfo[label];
+    if (!info) {
+      labelContainer.innerHTML = `
+        <div class="alert alert-warning mb-0">
+          No info available for <strong>${escapeHtml(label)}</strong>
+        </div>`;
+      return;
+    }
+
+    labelContainer.innerHTML = `
+      <h5 class="text-primary">${escapeHtml(label)} (${confidence.toFixed(2)}%)</h5>
+      <p class="mb-1"><strong>Model Confidence:</strong> ${confidence.toFixed(2)}%</p>
+
+      <div class="mt-3">
+        <strong>Meaning / Use:</strong>
+        <div>${escapeHtml(info.use)}</div>
+      </div>
+
+      <div class="mt-3">
+        <strong>Advantages:</strong>
+        <ul class="mb-0">${info.advantages.map(a => `<li>${escapeHtml(a)}</li>`).join("")}</ul>
+      </div>
+
+      <div class="mt-3">
+        <strong>Disadvantages:</strong>
+        <ul class="mb-0">${info.disadvantages.map(d => `<li>${escapeHtml(d)}</li>`).join("")}</ul>
+      </div>
+
+      <div class="mt-3">
+        <strong>Notes:</strong>
+        <div>${escapeHtml(info.notes || "—")}</div>
+      </div>
+    `;
+
+    // Save to Django
+    sendPredictionToBackend(label, confidence, info.notes || "");
+  }
+
+  function sendPredictionToBackend(predictedSign, confidence, notes) {
+    fetch("/save-prediction/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie("csrftoken")
+      },
+      body: JSON.stringify({
+        predicted_sign: predictedSign,
+        confidence: confidence,
+        notes: notes,
+        // IMPORTANT: send upload_id so backend can find the original image file to process
+        upload_id: {{ upload_id|default:"null" }}
+      })
+    })
+    .then(res => res.json())
+    .then(data => console.log("Saved:", data))
+    .catch(err => console.error("Error saving prediction:", err));
+  }
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let c of cookies) {
+        c = c.trim();
+        if (c.substring(0, name.length + 1) === (name + "=")) {
+          cookieValue = decodeURIComponent(c.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+</script>
+{% endblock %}
