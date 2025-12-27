@@ -303,3 +303,9 @@ def save_prediction(request):
 
     except Exception as e:
         return JsonResponse({"ok": False, "error": str(e)}, status=500)
+
+
+@login_required
+def predict_live_input(request):
+    """Prediction form page"""
+    return render(request, 'predict/form_camera.html')
